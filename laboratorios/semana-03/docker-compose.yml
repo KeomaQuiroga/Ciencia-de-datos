@@ -1,0 +1,37 @@
+services:
+# se separa lo de afuera y lo de adentro con indentación
+# son claves únicas, no se repiten los nombres en un mismo nivel
+  data-warehouse:
+    image: postgres:17
+    # postgres necesita configuraciones que están en las variables de entorno
+    environment:
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=admin
+      - POSTGRES_DB=proyecto
+
+    # host / contenedor
+    ports: 
+      - 5432:5432   # puerto por donde salgo: puerto del contenedor
+
+    volumes:
+      - warehouse-data:/var/lib/postgresql/data
+
+  warehouse-ui:
+    image: dpage/pgadmin4
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=keomaquiroga@gmail.com
+      - PGADMIN_DEFAULT_PASSWORD=admin
+
+    ports:
+      - 8080:80   # por defecto 80
+
+    depends_on:
+      - data-warehouse
+
+    volumes:
+      - warehouse-ui-data:/var/lib/pgadmin
+
+# encargado de la persistencia de datos
+volumes:
+  warehouse-data:
+  warehouse-ui-data:
