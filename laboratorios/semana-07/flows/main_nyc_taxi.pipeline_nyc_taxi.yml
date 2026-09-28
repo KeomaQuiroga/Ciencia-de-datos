@@ -1,0 +1,70 @@
+id: pipeline_nyc_taxi
+namespace: nyc_taxi
+
+description: |
+  Tubería ELT de NYC Yellow Taxi (Laboratorio Integrador 1).
+
+  Estado actual (Paso 4):
+    1. verifica la conexión a Snowflake
+    2. crea (si no existen) los objetos RAW
+    3. ingesta los archivos de TLC del rango pedido a la capa RAW
+  En los siguientes pasos se agregan las transformaciones con dbt.
+
+inputs:
+  - id: desde
+    type: STRING
+    defaults: "2025-01"
+    description: Primer mes a cargar (AAAA-MM)
+    validator: ^\d{4}-\d{2}$
+
+  - id: hasta
+    type: STRING
+    defaults: "2026-08"
+    description: Último mes a cargar (AAAA-MM)
+    validator: ^\d{4}-\d{2}$
+
+  - id: forzar_recarga
+    type: BOOL
+    defaults: false
+    description: Recargar los meses aunque ya estén cargados y sin cambios
+
+# Valores por defecto para todas las tareas de tipo Commands:
+#  - se ejecutan como procesos dentro del contenedor de Kestra
+#    (ahí está instalado el Python del pipeline, ver infra/kestra)
+#  - reciben las variables de conexión a Snowflake
+pluginDefaults:
+  - type: io.kestra.plugin.scripts.shell.Commands
+    values:
+      taskRunner:
+        type: io.kestra.plugin.core.runner.Process
+      env:
+        SNOWFLAKE_ACCOUNT: "{{ envs.snowflake_account }}"
+        SNOWFLAKE_USER: "{{ envs.snowflake_user }}"
+        SNOWFLAKE_ROLE: "{{ envs.snowflake_role }}"
+        SNOWFLAKE_WAREHOUSE: "{{ envs.snowflake_warehouse }}"
+        SNOWFLAKE_DATABASE: "{{ envs.snowflake_database }}"
+        SNOWFLAKE_PRIVATE_KEY_PATH: "{{ envs.snowflake_private_key_path }}"
+
+tasks:
+  - id: verificar_conexion
+    type: io.kestra.plugin.scripts.shell.Commands
+    description: Comprueba que el usuario de servicio entra a Snowflake con su llave.
+    commands:
+      - /opt/pipeline-venv/bin/python {{ envs.lab_dir }}/scripts/probar_conexion.py
+
+  - id: crear_objetos_raw
+    type: io.kestra.plugin.scripts.shell.Commands
+    description: Crea (si no existen) esquemas, formatos, stages y tablas RAW.
+    commands:
+      - /opt/pipeline-venv/bin/python {{ envs.lab_dir }}/ingesta/crear_objetos_raw.py
+
+  - id: ingestar_tlc
+    type: io.kestra.plugin.scripts.shell.Commands
+    description: Descarga los archivos de TLC y los carga a RAW sin duplicar.
+    timeout: PT2H
+    commands:
+      - >-
+        /opt/pipeline-venv/bin/python {{ envs.lab_dir }}/ingesta/ingestar_tlc.py
+        --desde {{ inputs.desde }}
+        --hasta {{ inputs.hasta }}
+        {{ inputs.forzar_recarga ? '--forzar' : '' }}

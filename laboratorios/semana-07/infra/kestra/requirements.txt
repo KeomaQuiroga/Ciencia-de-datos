@@ -1,0 +1,5 @@
+# Librerías de Python del pipeline (versiones fijas = reproducible)
+snowflake-connector-python==4.7.5
+requests==2.34.2
+dbt-core==1.12.5
+dbt-snowflake==1.12.1
