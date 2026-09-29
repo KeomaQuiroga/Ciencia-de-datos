@@ -76,7 +76,7 @@ semana-07/
 │   ├── crear_objetos_raw.py        ejecuta 01_objetos_raw.sql
 │   └── ingestar_tlc.py             descarga y carga a RAW, sin duplicar
 ├── flows/
-│   └── main_nyc_taxi.pipeline_nyc_taxi.yml   flujo de Kestra
+│   └── main_nyc_taxi_pipeline_nyc_taxi.yml   flujo de Kestra
 ├── dbt/
 │   ├── dbt_project.yml, profiles.yml
 │   ├── macros/                     nombres de esquemas y llave de fecha
