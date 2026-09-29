@@ -1,0 +1,182 @@
+version: 2
+
+# =====================================================================
+# GOLD: esquema estrella para analizar los viajes.
+#   Hechos:      fct_trips (grano: un viaje válido)
+#   Dimensiones: dim_date, dim_time, dim_zone, dim_vendor,
+#                dim_rate_code, dim_payment_type
+# dim_date, dim_time y dim_zone son dimensiones de rol múltiple: la tabla
+# de hechos las usa dos veces (salida y llegada; origen y destino).
+# Diagrama y explicación: docs/esquema_estrella.md
+# =====================================================================
+
+models:
+  - name: fct_trips
+    description: >
+      Tabla de hechos de viajes Yellow Taxi. Grano: un viaje válido y sin
+      duplicados. Contiene las llaves foráneas a cada dimensión y las
+      métricas del viaje (pasajeros, distancia, duración y montos en USD).
+    columns:
+      - name: trip_id
+        description: PK. Identificador único del viaje.
+        data_tests:
+          - not_null
+          - unique
+      - name: pickup_date_key
+        description: FK a dim_date. Fecha de salida.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_date')
+                field: date_key
+      - name: pickup_time_key
+        description: FK a dim_time. Hora de salida (0-23).
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_time')
+                field: time_key
+      - name: dropoff_date_key
+        description: FK a dim_date. Fecha de llegada.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_date')
+                field: date_key
+      - name: dropoff_time_key
+        description: FK a dim_time. Hora de llegada (0-23).
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_time')
+                field: time_key
+      - name: pickup_zone_key
+        description: FK a dim_zone. Zona de origen.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_zone')
+                field: zone_key
+      - name: dropoff_zone_key
+        description: FK a dim_zone. Zona de destino.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_zone')
+                field: zone_key
+      - name: vendor_key
+        description: FK a dim_vendor. Proveedor que reportó el viaje.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_vendor')
+                field: vendor_key
+      - name: rate_code_key
+        description: FK a dim_rate_code. Tarifa aplicada.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_rate_code')
+                field: rate_code_key
+      - name: payment_type_key
+        description: FK a dim_payment_type. Forma de pago.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_payment_type')
+                field: payment_type_key
+      - name: has_reversal
+        description: Atributo. TRUE si el cobro del viaje fue anulado después (reverso).
+      - name: is_store_and_forward
+        description: Atributo. El registro se guardó en el vehículo antes de enviarse.
+      - name: passenger_count
+        description: Métrica. Pasajeros (1 a 6; NULL si se desconoce).
+      - name: trip_distance_miles
+        description: Métrica. Distancia en millas (NULL si no se registró).
+      - name: trip_duration_minutes
+        description: Métrica. Duración en minutos (NULL si no se registró la llegada).
+      - name: fare_amount
+        description: Métrica. Cargo por tiempo y distancia del taxímetro (USD).
+      - name: tip_amount
+        description: Métrica. Propina con tarjeta (USD). Las propinas en efectivo no se registran.
+      - name: total_amount
+        description: Métrica. Total cobrado al pasajero (USD).
+        data_tests:
+          - not_null
+
+  - name: dim_date
+    description: Calendario. Grano un día. Cubre desde la primera salida hasta la última llegada.
+    columns:
+      - name: date_key
+        description: PK. Fecha en formato AAAAMMDD.
+        data_tests:
+          - not_null
+          - unique
+      - name: full_date
+        data_tests:
+          - not_null
+          - unique
+
+  - name: dim_time
+    description: Horas del día. Grano una hora (0 a 23).
+    columns:
+      - name: time_key
+        description: PK. Hora del día (0 a 23).
+        data_tests:
+          - not_null
+          - unique
+      - name: day_period
+        description: Franja del día (Madrugada, Mañana, Tarde, Noche).
+        data_tests:
+          - not_null
+
+  - name: dim_zone
+    description: Zonas de taxi de TLC. Grano una zona.
+    columns:
+      - name: zone_key
+        description: PK. LocationID oficial de TLC.
+        data_tests:
+          - not_null
+          - unique
+      - name: borough
+        data_tests:
+          - not_null
+      - name: zone_name
+        data_tests:
+          - not_null
+
+  - name: dim_vendor
+    description: Proveedores tecnológicos (TPEP). Grano un proveedor.
+    columns:
+      - name: vendor_key
+        description: PK. Código oficial de TLC.
+        data_tests:
+          - not_null
+          - unique
+
+  - name: dim_rate_code
+    description: Códigos de tarifa. Grano un código.
+    columns:
+      - name: rate_code_key
+        description: PK. Código oficial de TLC (99 = desconocido).
+        data_tests:
+          - not_null
+          - unique
+
+  - name: dim_payment_type
+    description: Formas de pago. Grano una forma de pago.
+    columns:
+      - name: payment_type_key
+        description: PK. Código oficial de TLC (0 = Flex Fare).
+        data_tests:
+          - not_null
+          - unique
