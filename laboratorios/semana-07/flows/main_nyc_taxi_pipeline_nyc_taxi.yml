@@ -4,11 +4,11 @@ namespace: nyc_taxi
 description: |
   Tubería ELT de NYC Yellow Taxi (Laboratorio Integrador 1).
 
-  Estado actual (Paso 4):
+  Tareas:
     1. verifica la conexión a Snowflake
     2. crea (si no existen) los objetos RAW
     3. ingesta los archivos de TLC del rango pedido a la capa RAW
-  En los siguientes pasos se agregan las transformaciones con dbt.
+    4. ejecuta dbt: construye las capas y corre todas las pruebas
 
 inputs:
   - id: desde
@@ -28,6 +28,11 @@ inputs:
     defaults: false
     description: Recargar los meses aunque ya estén cargados y sin cambios
 
+  - id: dbt_full_refresh
+    type: BOOL
+    defaults: false
+    description: Reconstruir desde cero los modelos incrementales de dbt
+
 # Valores por defecto para todas las tareas de tipo Commands:
 #  - se ejecutan como procesos dentro del contenedor de Kestra
 #    (ahí está instalado el Python del pipeline, ver infra/kestra)
@@ -44,6 +49,11 @@ pluginDefaults:
         SNOWFLAKE_WAREHOUSE: "{{ envs.snowflake_warehouse }}"
         SNOWFLAKE_DATABASE: "{{ envs.snowflake_database }}"
         SNOWFLAKE_PRIVATE_KEY_PATH: "{{ envs.snowflake_private_key_path }}"
+        # dbt: dónde está profiles.yml y dónde deja sus archivos temporales
+        # (fuera de tu carpeta, para no llenarla de archivos generados)
+        DBT_PROFILES_DIR: "{{ envs.lab_dir }}/dbt"
+        DBT_TARGET_PATH: /tmp/dbt/target
+        DBT_LOG_PATH: /tmp/dbt/logs
 
 tasks:
   - id: verificar_conexion
@@ -68,3 +78,16 @@ tasks:
         --desde {{ inputs.desde }}
         --hasta {{ inputs.hasta }}
         {{ inputs.forzar_recarga ? '--forzar' : '' }}
+
+  - id: dbt_build
+    type: io.kestra.plugin.scripts.shell.Commands
+    description: >
+      dbt debug --connection comprueba la conexión a Snowflake; dbt build
+      construye cada capa y corre sus pruebas en orden (si una prueba falla,
+      lo que depende de ella no se construye y la tarea falla).
+    timeout: PT1H
+    commands:
+      - /opt/pipeline-venv/bin/dbt debug --connection --project-dir {{ envs.lab_dir }}/dbt
+      - >-
+        /opt/pipeline-venv/bin/dbt build --project-dir {{ envs.lab_dir }}/dbt
+        {{ inputs.dbt_full_refresh ? '--full-refresh' : '' }}

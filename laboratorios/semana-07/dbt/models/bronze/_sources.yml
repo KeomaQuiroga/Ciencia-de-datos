@@ -1,0 +1,35 @@
+version: 2
+
+# Fuentes: las tablas RAW que llena la ingesta (ingesta/ingestar_tlc.py).
+# dbt no las crea ni las modifica; solo las lee.
+sources:
+  - name: raw
+    description: Zona de aterrizaje. Datos tal como llegan de NYC TLC.
+    database: "{{ env_var('SNOWFLAKE_DATABASE') }}"
+    schema: RAW
+    tables:
+      - name: yellow_trips
+        description: >
+          Viajes Yellow Taxi de los archivos mensuales Parquet. Una fila por
+          registro del archivo original, más la metadata que agrega el COPY.
+        columns:
+          - name: _source_file
+            description: Nombre del archivo Parquet de origen.
+            data_tests:
+              - not_null
+          - name: _loaded_at
+            description: Fecha y hora en que el archivo se copió a RAW.
+            data_tests:
+              - not_null
+
+      - name: taxi_zones
+        description: Catálogo oficial de zonas de taxi (taxi_zone_lookup.csv).
+        columns:
+          - name: locationid
+            description: Identificador de la zona.
+            data_tests:
+              - not_null
+              - unique
+
+      - name: ingestion_log
+        description: Bitácora de cada intento de carga de la ingesta.

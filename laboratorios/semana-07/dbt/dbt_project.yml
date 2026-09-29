@@ -1,0 +1,38 @@
+# =====================================================================
+# Proyecto dbt del laboratorio: NYC Yellow Taxi
+#
+# Capas (cada carpeta de models/ se guarda en su propio esquema):
+#   bronze/  -> NYC_TAXI.BRONZE  datos cercanos a la fuente + metadata
+#   silver/  -> NYC_TAXI.SILVER  datos limpios y estandarizados
+#   gold/    -> NYC_TAXI.GOLD    esquema estrella para análisis
+# =====================================================================
+name: nyc_taxi
+version: "1.0.0"
+config-version: 2
+require-dbt-version: [">=1.10.0", "<2.0.0"]
+
+profile: nyc_taxi
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+test-paths: ["tests"]
+clean-targets: ["target", "dbt_packages"]
+
+flags:
+  send_anonymous_usage_stats: false
+
+models:
+  nyc_taxi:
+    bronze:
+      +schema: BRONZE
+    silver:
+      +schema: SILVER
+      +materialized: table
+    gold:
+      +schema: GOLD
+      +materialized: table
+
+seeds:
+  nyc_taxi:
+    +schema: SILVER

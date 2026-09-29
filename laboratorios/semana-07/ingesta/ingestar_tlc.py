@@ -226,7 +226,9 @@ def cargar_mes(cur, sesion, periodo, carpeta, forzar, previas, en_raw, hoy) -> R
         if not forzar and archivo in previas:
             tamano_prev, filas_prev = previas[archivo]
             if tamano_prev == tamano and en_raw.get(archivo) == filas_prev:
-                return Resultado(archivo, SKIPPED, filas_prev, "ya cargado, sin cambios")
+                msg = "ya cargado, sin cambios"
+                registrar(cur, archivo, periodo, url, SKIPPED, filas_prev, tamano, inicio, msg)
+                return Resultado(archivo, SKIPPED, filas_prev, msg)
 
         # 3) Descargar, subir al stage y copiar a RAW
         ruta = carpeta / archivo

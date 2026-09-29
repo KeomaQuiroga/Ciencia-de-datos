@@ -117,7 +117,7 @@ CREATE TABLE IF NOT EXISTS NYC_TAXI.RAW.INGESTION_LOG (
     source_file     VARCHAR,
     source_period   DATE,
     source_url      VARCHAR,
-    status          VARCHAR,        -- LOADED / NOT_AVAILABLE / FAILED
+    status          VARCHAR,        -- LOADED / SKIPPED / NOT_AVAILABLE / FAILED
     rows_loaded     NUMBER(38,0),
     file_size_bytes NUMBER(38,0),
     started_at      TIMESTAMP_LTZ,

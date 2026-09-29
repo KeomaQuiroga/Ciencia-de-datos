@@ -1,0 +1,45 @@
+version: 2
+
+models:
+  - name: bronze_yellow_trips
+    description: >
+      Viajes Yellow Taxi lo más cercanos posible a la fuente original: mismas
+      columnas y valores que el Parquet de TLC, sin limpieza. Se agrega metadata
+      para saber de qué archivo y período viene cada fila y cuándo se cargó.
+      Grano: una fila por registro de cada archivo mensual.
+    columns:
+      - name: _source_file
+        description: Archivo de origen (por ejemplo yellow_tripdata_2025-01.parquet).
+        data_tests:
+          - not_null
+      - name: _source_period
+        description: Primer día del mes al que corresponde el archivo de origen.
+        data_tests:
+          - not_null
+      - name: _file_last_modified
+        description: Fecha de modificación del archivo en el stage de Snowflake.
+      - name: _loaded_at
+        description: Fecha y hora en que el archivo se copió a RAW.
+        data_tests:
+          - not_null
+      - name: _bronze_loaded_at
+        description: Fecha y hora en que dbt escribió la fila en Bronze.
+        data_tests:
+          - not_null
+
+  - name: bronze_taxi_zones
+    description: >
+      Catálogo de zonas de taxi tal como viene en taxi_zone_lookup.csv, con
+      metadata de origen y carga. Grano: una fila por zona (LocationID).
+    columns:
+      - name: locationid
+        description: Identificador de la zona usado en PULocationID y DOLocationID.
+        data_tests:
+          - not_null
+          - unique
+      - name: _source_file
+        data_tests:
+          - not_null
+      - name: _loaded_at
+        data_tests:
+          - not_null
