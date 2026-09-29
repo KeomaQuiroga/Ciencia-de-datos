@@ -1,0 +1,37 @@
+version: 2
+
+# Catálogos de referencia tomados del diccionario de datos oficial de TLC
+# (Yellow Trips Data Dictionary, versión del 18 de marzo de 2025).
+seeds:
+  - name: ref_vendors
+    description: Proveedores tecnológicos (TPEP) que reportan los viajes.
+    columns:
+      - name: vendor_id
+        data_tests:
+          - not_null
+          - unique
+      - name: vendor_name
+        data_tests:
+          - not_null
+
+  - name: ref_rate_codes
+    description: Códigos de tarifa. 99 = Null/unknown.
+    columns:
+      - name: rate_code_id
+        data_tests:
+          - not_null
+          - unique
+      - name: rate_code_name
+        data_tests:
+          - not_null
+
+  - name: ref_payment_types
+    description: Formas de pago. 0 = Flex Fare (precio acordado por adelantado).
+    columns:
+      - name: payment_type_id
+        data_tests:
+          - not_null
+          - unique
+      - name: payment_type_name
+        data_tests:
+          - not_null

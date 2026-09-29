@@ -35,4 +35,5 @@ models:
 
 seeds:
   nyc_taxi:
+    # Catálogos del diccionario de datos de TLC (seeds/*.csv), en SILVER
     +schema: SILVER

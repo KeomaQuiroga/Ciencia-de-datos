@@ -1,0 +1,145 @@
+version: 2
+
+models:
+  - name: silver_yellow_trips_evaluated
+    description: >
+      Todas las filas de Bronze estandarizadas (nombres snake_case, tipos
+      correctos) y evaluadas contra las reglas de calidad. rejection_reason
+      dice por qué una fila no pasa a Silver (NULL = válida). Es la base de
+      silver_yellow_trips y de silver_yellow_trips_rejected.
+    columns:
+      - name: trip_id
+        description: >
+          Identificador del viaje: hash MD5 de proveedor, fecha y hora de
+          salida, fecha y hora de llegada, zona de origen y zona de destino.
+        data_tests:
+          - not_null
+      - name: rejection_reason
+        description: Motivo por el que la fila no pasa a Silver; NULL si es válida.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values:
+                  - reverso_monto_negativo
+                  - tarifa_negativa
+                  - llegada_antes_de_salida
+                  - duracion_mayor_24h
+                  - fuera_del_periodo_del_archivo
+                  - sin_movimiento
+                  - distancia_mayor_200_millas
+                  - total_mayor_1000
+                  - duplicado
+
+  - name: silver_yellow_trips
+    description: >
+      Viajes Yellow Taxi limpios, válidos y sin duplicados. Grano: un viaje
+      (trip_id). Nombres y tipos estandarizados; valores imposibles puntuales
+      convertidos a NULL sin descartar el viaje. Ver docs/decisiones_de_limpieza.md.
+    columns:
+      - name: trip_id
+        description: Identificador único del viaje.
+        data_tests:
+          - not_null
+          - unique
+      - name: vendor_id
+        description: Proveedor tecnológico que reportó el viaje (ref_vendors).
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('ref_vendors')
+                field: vendor_id
+      - name: pickup_datetime
+        description: Fecha y hora de inicio del viaje (hora local de NYC).
+        data_tests:
+          - not_null
+      - name: dropoff_datetime
+        description: Fecha y hora de fin del viaje (hora local de NYC).
+        data_tests:
+          - not_null
+      - name: trip_duration_minutes
+        description: Duración en minutos. NULL si la llegada no se registró (duración 0).
+      - name: passenger_count
+        description: Pasajeros (1 a 6). NULL si no se reportó o el valor era imposible.
+      - name: trip_distance_miles
+        description: Distancia en millas. NULL si no se registró (venía en 0).
+      - name: rate_code_id
+        description: Tarifa aplicada (ref_rate_codes). 99 = desconocida.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('ref_rate_codes')
+                field: rate_code_id
+      - name: is_store_and_forward
+        description: El registro se guardó en el vehículo antes de enviarse. NULL si no se reportó.
+      - name: pickup_location_id
+        description: Zona de origen (silver_taxi_zones).
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('silver_taxi_zones')
+                field: location_id
+      - name: dropoff_location_id
+        description: Zona de destino (silver_taxi_zones).
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('silver_taxi_zones')
+                field: location_id
+      - name: payment_type_id
+        description: Forma de pago (ref_payment_types). 0 = Flex Fare.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('ref_payment_types')
+                field: payment_type_id
+      - name: total_amount
+        description: Total cobrado al pasajero, sin propinas en efectivo (USD).
+        data_tests:
+          - not_null
+      - name: has_reversal
+        description: >
+          TRUE si el proveedor envió después un reverso (copia con montos
+          negativos) de este viaje, es decir, el cobro fue anulado o disputado.
+          Útil para excluir estos viajes de los análisis de ingresos.
+        data_tests:
+          - not_null
+
+  - name: silver_yellow_trips_rejected
+    description: >
+      Cuarentena: filas de Bronze que no pasaron a Silver, con sus valores
+      originales y el motivo (rejection_reason). Nada se borra.
+    columns:
+      - name: rejection_reason
+        data_tests:
+          - not_null
+
+  - name: silver_taxi_zones
+    description: >
+      Catálogo de zonas limpio. Grano: una zona (location_id). Las zonas
+      especiales 264 (desconocida) y 265 (fuera de NYC) tienen etiquetas
+      explícitas en lugar de campos vacíos.
+    columns:
+      - name: location_id
+        description: Identificador de la zona.
+        data_tests:
+          - not_null
+          - unique
+      - name: borough
+        description: Distrito (Manhattan, Queens, Brooklyn, Bronx, Staten Island, EWR, ...).
+        data_tests:
+          - not_null
+      - name: zone_name
+        description: Nombre de la zona.
+        data_tests:
+          - not_null
+      - name: service_zone
+        description: Tipo de zona de servicio (Yellow Zone, Boro Zone, Airports, ...).
+        data_tests:
+          - not_null
+      - name: is_identified_zone
+        description: FALSE para las zonas especiales 264 y 265.
