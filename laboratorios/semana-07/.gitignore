@@ -4,6 +4,7 @@
 keys/
 *.p8
 *.pem
+logs
 
 # --- Datos descargados ---
 data/
