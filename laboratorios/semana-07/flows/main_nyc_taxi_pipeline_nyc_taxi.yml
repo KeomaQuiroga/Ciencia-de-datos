@@ -8,7 +8,10 @@ description: |
     1. verifica la conexión a Snowflake
     2. crea (si no existen) los objetos RAW
     3. ingesta los archivos de TLC del rango pedido a la capa RAW
-    4. ejecuta dbt: construye las capas y corre todas las pruebas
+    4. ejecuta dbt: construye Bronze, Silver y Gold y corre todas las pruebas
+
+  Se ejecuta a mano (Execute) o sola cada lunes (trigger revision_semanal).
+  Es idempotente: re-ejecutarla no duplica ni cambia los resultados.
 
 inputs:
   - id: desde
@@ -91,3 +94,13 @@ tasks:
       - >-
         /opt/pipeline-venv/bin/dbt build --project-dir {{ envs.lab_dir }}/dbt
         {{ inputs.dbt_full_refresh ? '--full-refresh' : '' }}
+
+# Ejecución automática: cada lunes revisa si TLC publicó meses nuevos del
+# rango (por ejemplo agosto 2026) y actualiza todas las capas. Si no hay
+# nada nuevo, la ingesta salta todo y dbt reconstruye con el mismo resultado.
+# (Kestra debe estar encendido a esa hora para que se dispare.)
+triggers:
+  - id: revision_semanal
+    type: io.kestra.plugin.core.trigger.Schedule
+    cron: "0 6 * * 1"
+    timezone: America/Guayaquil
